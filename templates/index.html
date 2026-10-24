@@ -1,0 +1,234 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyBuddy AI</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f5fb;
+            color: #202642;
+        }
+
+        header {
+            background: #202642;
+            color: white;
+            padding: 28px 20px;
+            text-align: center;
+        }
+
+        header h1 { margin: 0 0 8px; }
+        header p { margin: 0; color: #dce2ff; }
+
+        main {
+            max-width: 850px;
+            margin: 35px auto;
+            padding: 0 18px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 22px;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px #20264212;
+        }
+
+        label {
+            display: block;
+            margin: 17px 0 7px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccd1e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 22px;
+            background: #6254d9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover { background: #4e42bd; }
+        button:disabled { opacity: 0.6; cursor: wait; }
+
+        .muted { color: #646b80; line-height: 1.6; }
+        .error { color: #b42318; font-weight: bold; }
+        .plan-item { margin: 12px 0; line-height: 1.5; }
+        .quiz-item {
+            padding: 16px;
+            margin: 14px 0;
+            background: #f6f7fc;
+            border-radius: 8px;
+        }
+
+        .quiz-item p { line-height: 1.5; }
+        .answer { color: #267347; }
+        .tag {
+            display: inline-block;
+            background: #e9e6ff;
+            color: #4e42bd;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        footer {
+            text-align: center;
+            color: #777e91;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📚 StudyBuddy AI</h1>
+        <p>Your personal AI study planner and quiz creator</p>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>Build your study session</h2>
+            <p class="muted">Tell StudyBuddy what you're learning, and get a personalized study plan with practice questions.</p>
+
+            <form id="studyForm">
+                <label for="topic">What topic are you studying?</label>
+                <input id="topic" name="topic" placeholder="e.g. Photosynthesis, Java, or Automata" required maxlength="300">
+
+                <label for="minutes">How much time do you have?</label>
+                <select id="minutes" name="minutes">
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="90">90 minutes</option>
+                </select>
+
+                <label for="level">Your current level</label>
+                <select id="level" name="level">
+                    <option>Beginner</option>
+                    <option>Intermediate</option>
+                    <option>Advanced</option>
+                </select>
+
+                <button id="generateBtn" type="submit">✨ Create My Study Plan</button>
+            </form>
+            <p id="status" class="muted" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="results" class="card" hidden aria-live="polite"></section>
+    </main>
+
+    <footer>StudyBuddy AI · Learn smarter, one session at a time.</footer>
+
+    <script>
+        const form = document.getElementById("studyForm");
+        const button = document.getElementById("generateBtn");
+        const statusText = document.getElementById("status");
+        const results = document.getElementById("results");
+
+        function addText(parent, tag, text, className = "") {
+            const element = document.createElement(tag);
+            element.textContent = text ?? "";
+            if (className) element.className = className;
+            parent.appendChild(element);
+            return element;
+        }
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            results.replaceChildren();
+            results.hidden = true;
+            statusText.className = "muted";
+            statusText.textContent = "Creating your personalized study plan...";
+            button.disabled = true;
+            button.textContent = "Please wait...";
+
+            const payload = {
+                topic: document.getElementById("topic").value.trim(),
+                minutes: Number(document.getElementById("minutes").value),
+                level: document.getElementById("level").value
+            };
+
+            try {
+                const response = await fetch("/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Something went wrong.");
+                }
+
+                results.hidden = false;
+                addText(results, "h2", data.title || "Your Personalized Study Plan");
+                addText(results, "span", payload.level + " · " + payload.minutes + " minutes", "tag");
+
+                addText(results, "h3", "🗓️ Your Study Plan");
+                const planList = document.createElement("ol");
+
+                (data.study_plan || []).forEach(item => {
+                    const li = document.createElement("li");
+                    li.className = "plan-item";
+                    addText(li, "strong", (item.time || "") + ": ");
+                    li.appendChild(document.createTextNode(item.task || ""));
+                    planList.appendChild(li);
+                });
+                results.appendChild(planList);
+
+                addText(results, "h3", "🧠 Practice Quiz");
+                (data.quiz || []).forEach((question, index) => {
+                    const box = document.createElement("div");
+                    box.className = "quiz-item";
+                    addText(box, "strong", (index + 1) + ". " + question.question);
+
+                    (question.options || []).forEach(option => {
+                        addText(box, "p", option);
+                    });
+
+                    addText(box, "p", "Correct answer: " + (question.answer || "Not provided"), "answer");
+                    addText(box, "p", "Explanation: " + (question.explanation || "Not provided"), "muted");
+                    results.appendChild(box);
+                });
+
+                addText(results, "h3", "💡 Study Tips");
+                const tipsList = document.createElement("ul");
+                (data.tips || []).forEach(tip => addText(tipsList, "li", tip));
+                results.appendChild(tipsList);
+
+                statusText.textContent = "Your study session is ready!";
+            } catch (error) {
+                statusText.className = "error";
+                statusText.textContent = error.message;
+            } finally {
+                button.disabled = false;
+                button.textContent = "✨ Create My Study Plan";
+            }
+        });
+    </script>
+</body>
+</html>
