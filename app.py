@@ -36,10 +36,19 @@ Return only a valid JSON object with this structure:
 }
 
 Create 3 to 6 study steps and exactly 5 quiz questions.
-Include four answer options per question and make the correct answer clear.
-Make the total study steps fit the time available.
+Include exactly four answer options per question.
 Include 2 to 4 useful study tips.
-Do not add markdown fences around the JSON.
+
+IMPORTANT JSON RULES:
+- Return one complete, valid JSON object.
+- Every study_plan item must be a separate object with "time" and "task" fields.
+- Close each object and array before starting the next one.
+- Separate array items with commas.
+- Escape any quotation marks inside string values.
+- Do not include comments or trailing commas.
+- Ensure all brackets and braces are properly matched.
+- Make the study plan fit the available time.
+- Do not add markdown fences around the JSON.
 """
 
 
